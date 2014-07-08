@@ -6,8 +6,6 @@ A module for managing notoriously big data.
 
 * TODO(ejhumphrey): write me.
 
-### How do I get set up? ###
-
-* Dependencies
-** numpy
-** h5py
+### Dependencies ###
+- numpy
+- h5py
