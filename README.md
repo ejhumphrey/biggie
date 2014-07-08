@@ -1,27 +1,13 @@
-# README #
+# Biggie #
 
-Biggie -- A module for managing notoriously big data.
+A module for managing notoriously big data.
 
-### What can biggie do for me? ###
+### Overview ###
 
-* Quick summary
+* TODO(ejhumphrey): write me.
 
 ### How do I get set up? ###
 
-* Summary of set up
-* Configuration
 * Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
-
-### Contribution guidelines ###
-
-* Writing tests
-* Code review
-* Other guidelines
-
-### Who do I talk to? ###
-
-* Repo owner or admin
-* Other community or team contact
+** numpy
+** h5py
