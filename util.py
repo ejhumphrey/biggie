@@ -1,4 +1,5 @@
 """Utility functions."""
+import numpy as np
 
 
 def expand_hex(hexval, width):
@@ -79,3 +80,29 @@ def uniform_hexgen(depth, width=256):
         hexval = "0x" + "".join([a + b for a, b in zip(v[-2:1:-2], v[:1:-2])])
         yield index_to_hexkey(int(hexval, 16), depth)
     raise ValueError("Unique keys exhausted.")
+
+
+def unpack_entity_list(entities):
+    """Turn a list of entities into key-np.ndarray objects.
+
+    TODO(ejhumphrey): Is this a bottleneck in the data
+    bundling / presentation process?
+
+    Parameters
+    ----------
+    entities: list of Entities
+        Note that all Entities must have identical fields.
+
+    Returns
+    -------
+    arrays: dict of np.ndarrays
+        Values in 'arrays' are keyed by the fields of the Entities.
+    """
+    data = dict([(k, list()) for k in entities[0].keys()])
+    for entity in entities:
+        for k, v in entity.values().iteritems():
+            data[k].append(v)
+
+    for k in data:
+        data[k] = np.asarray(data[k])
+    return data
