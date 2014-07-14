@@ -37,6 +37,9 @@ class Entity(object):
         """writeme."""
         return self.__dict__.keys()
 
+    def values(self):
+        return dict([(k, self[k].value) for k in self.keys()])
+
     def __setitem__(self, key, value):
         """Set value for key.
 
@@ -49,9 +52,33 @@ class Entity(object):
         """
         self.__dict__[key] = Field(value)
 
+    def __setattr__(self, key, value):
+        """Set value for key.
+
+        Parameters
+        ----------
+        key: str
+            Attribute name, must be valid python attribute syntax.
+        value: scalar, string, list, or np.ndarray
+            Data corresponding to the given key.
+        """
+        self[key] = value
+
     def __getitem__(self, key):
         """writeme."""
         return self.__dict__[key]
+
+    def __getattr__(self, key):
+        """Set value for key.
+
+        Parameters
+        ----------
+        key: str
+            Attribute name, must be valid python attribute syntax.
+        value: scalar, string, list, or np.ndarray
+            Data corresponding to the given key.
+        """
+        return self[key]
 
     def __delitem__(self, key):
         """writeme."""
@@ -67,10 +94,6 @@ class Entity(object):
         for key in group:
             new_grp.__dict__[key] = _LazyField(group[key])
         return new_grp
-
-    @property
-    def values(self):
-        return dict([(k, self[k].value) for k in self.keys()])
 
 
 class Field(object):
