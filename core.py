@@ -30,14 +30,15 @@ class Entity(object):
             self[key] = value
 
     def __repr__(self):
-        """Render the object as an unambiguous string."""
+        """Render the Field names of the Entity as a string."""
         return '%s{%s}' % (self.__class__.__name__, ", ".join(self.keys()))
 
     def keys(self):
-        """writeme."""
+        """Field names of the Entity."""
         return self.__dict__.keys()
 
     def values(self):
+        """Return the values of the struct."""
         return dict([(k, self[k].value) for k in self.keys()])
 
     def __setitem__(self, key, value):
@@ -48,7 +49,7 @@ class Entity(object):
         key: str
             Attribute name, must be valid python attribute syntax.
         value: scalar, string, list, or np.ndarray
-            Data corresponding to the given key.
+            Data corresponding to the given key, stored as a Field.
         """
         self.__dict__[key] = Field(value)
 
@@ -60,28 +61,20 @@ class Entity(object):
         key: str
             Attribute name, must be valid python attribute syntax.
         value: scalar, string, list, or np.ndarray
-            Data corresponding to the given key.
+            Data corresponding to the given key, stored as a Field.
         """
         self[key] = value
 
     def __getitem__(self, key):
-        """writeme."""
+        """Get value for key."""
         return self.__dict__[key]
 
     def __getattr__(self, key):
-        """Set value for key.
-
-        Parameters
-        ----------
-        key: str
-            Attribute name, must be valid python attribute syntax.
-        value: scalar, string, list, or np.ndarray
-            Data corresponding to the given key.
-        """
+        """Unnecessary, but could make Fields more transparent?"""
         return self[key]
 
     def __delitem__(self, key):
-        """writeme."""
+        """Remove an attribute from the Entity."""
         del self.__dict__[key]
 
     def __len__(self):
