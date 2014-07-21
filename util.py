@@ -82,7 +82,7 @@ def uniform_hexgen(depth, width=256):
     raise ValueError("Unique keys exhausted.")
 
 
-def unpack_entity_list(entities):
+def unpack_entity_list(entities, filter_nulls=True):
     """Turn a list of entities into key-np.ndarray objects.
 
     TODO(ejhumphrey): Is this a bottleneck in the data
@@ -100,6 +100,8 @@ def unpack_entity_list(entities):
     """
     data = dict([(k, list()) for k in entities[0].keys()])
     for entity in entities:
+        if entity is None and filter_nulls:
+            continue
         for k, v in entity.values().iteritems():
             data[k].append(v)
 
