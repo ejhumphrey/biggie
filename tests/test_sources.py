@@ -28,26 +28,26 @@ class TestSources(unittest.TestCase):
         loaded_entity = fh.get(key)
 
         self.assertEqual(
-            self.entity.a.value,
-            loaded_entity.a.value,
+            self.entity.a,
+            loaded_entity.a,
             "Could not reconstitute entity.a")
 
         self.assertEqual(
-            self.entity.b.value.tostring(),
-            loaded_entity.b.value.tostring(),
+            self.entity.b.tostring(),
+            loaded_entity.b.tostring(),
             "Could not reconstitute entity.b")
 
         self.assertEqual(
-            self.entity.c.value.tolist(),
-            loaded_entity.c.value.tolist(),
+            self.entity.c.tolist(),
+            loaded_entity.c.tolist(),
             "Could not reconstitute entity.c")
 
         self.assertEqual(
-            self.entity.d.value.tolist(),
-            loaded_entity.d.value.tolist(),
+            self.entity.d.tolist(),
+            loaded_entity.d.tolist(),
             "Could not reconstitute entity.d")
 
-        loaded_entity.a.value = 4
+        loaded_entity.a = 4
         self.assertRaises(ValueError, fh.add, key, loaded_entity)
 
         fh.add(key, loaded_entity, True)
@@ -56,7 +56,7 @@ class TestSources(unittest.TestCase):
         fh = biggie.Stash(fpath)
         another_entity = fh.get(key)
         self.assertEqual(len(fh), 1)
-        self.assertEqual(another_entity.a.value, 4)
+        self.assertEqual(another_entity.a, 4)
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,7 +2,7 @@
 
 
 The primary object is an Entity, which consists of named Fields. Each Field
-will have a 'value', which returns the data (scalar, string, list, or array).
+returns the data (scalar, string, list, or array) saved to the attribute.
 
 The goal of Entities / Fields is to provide a seamless de/serialization
 data structure for scaling well with potentially massive datasets.
@@ -69,9 +69,12 @@ class Entity(object):
         """Get value for key."""
         return self.__dict__[key]
 
-    def __getattr__(self, key):
+    def __getattribute__(self, key):
         """Unnecessary, but could make Fields more transparent?"""
-        return self[key]
+        obj = object.__getattribute__(self, key)
+        if isinstance(obj, Field) or isinstance(obj, _LazyField):
+            obj = obj.value
+        return obj
 
     def __delitem__(self, key):
         """Remove an attribute from the Entity."""

@@ -54,7 +54,9 @@ class Stash(h5py.File):
 
         h5py.File.close(self)
 
-    def get(self, key):
+    def get(self, key, deep=False):
+        # TODO(ejhumphrey): Optionally load the Entity's fields deeply.
+        # TODO(ejhumphrey): Don't die so grossly if the key doesn't exist.
         """Fetch the entity for a given key."""
         addr = self._keymap.get(key)
         raw_group = h5py.File.get(self, addr)

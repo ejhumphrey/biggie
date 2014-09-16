@@ -98,10 +98,12 @@ def unpack_entity_list(entities, filter_nulls=True):
     arrays: dict of np.ndarrays
         Values in 'arrays' are keyed by the fields of the Entities.
     """
-    data = dict([(k, list()) for k in entities[0].keys()])
+    data = dict()
     for entity in entities:
         if entity is None and filter_nulls:
             continue
+        if data == {}:
+            data = dict([(k, list()) for k in entity.keys()])
         for k, v in entity.values().iteritems():
             data[k].append(v)
 
