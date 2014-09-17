@@ -13,7 +13,7 @@ class Stash(h5py.File):
     __DEPTH__ = 3
 
     def __init__(self, name, mode=None, entity_class=None, cache=False,
-                 **kwargs):
+                 verbose=False, **kwargs):
         """
         Parameters
         ----------
@@ -30,6 +30,7 @@ class Stash(h5py.File):
             entity_class = Entity
         self._entity_cls = entity_class
         self._cache = cache
+        self._verbose = verbose
         self.__local__ = dict()
         self._keymap = self.__decode_keymap__()
         self._agu = uniform_hexgen(self.__DEPTH__, self.__WIDTH__)
@@ -43,6 +44,9 @@ class Stash(h5py.File):
 
     def __del__(self):
         """Safe default destructor"""
+        # Old h5py consideration, version 2.0.1
+        if not hasattr(self.fid, 'valid'):
+            return
         if self.fid.valid:
             self.close()
 
@@ -67,12 +71,14 @@ class Stash(h5py.File):
             raise ValueError(
                 "Key inconsistency: received '%s'"
                 ", expected '%s'" % (raw_key, key))
-        print "Loading %s" % key
+        if self._verbose:
+            print "Loading %s" % key
         return self._entity_cls.from_hdf5_group(raw_group)
 
     def get(self, key):
         """Fetch the entity for a given key."""
-        value = self.__local__.get(key, self.__load__(key))
+        value = self.__local__.get(key, None)
+        value = self.__load__(key) if value is None else value
         if self._cache:
             self.__local__[key] = value
 

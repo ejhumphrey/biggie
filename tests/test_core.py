@@ -48,5 +48,12 @@ class TestCore(unittest.TestCase):
             self.some_ndarray,
             "Failed to initialize a numpy array.")
 
+    def test_values(self):
+        values = self.entity.values()
+        self.assertEqual(
+            values['a'],
+            self.some_int,
+            "Failed to initialize a numpy array.")
+
 if __name__ == "__main__":
     unittest.main()

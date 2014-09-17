@@ -39,7 +39,7 @@ class Entity(object):
 
     def values(self):
         """Return the values of the struct."""
-        return dict([(k, self[k].value) for k in self.keys()])
+        return dict([(k, getattr(self, k)) for k in self.keys()])
 
     def __setitem__(self, key, value):
         """Set value for key.
@@ -124,7 +124,7 @@ class _LazyField(object):
     def value(self):
         """writeme."""
         if self._value is None:
-            self._value = self._dataset.value
+            self._value = np.asarray(self._dataset.value)
         return self._value
 
     @value.setter
