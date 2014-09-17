@@ -12,7 +12,8 @@ class Stash(h5py.File):
     __WIDTH__ = 256
     __DEPTH__ = 3
 
-    def __init__(self, name, mode=None, entity=None, **kwds):
+    def __init__(self, name, mode=None, entity_class=None, cache=False,
+                 **kwargs):
         """
         Parameters
         ----------
@@ -23,12 +24,13 @@ class Stash(h5py.File):
         entity: Entity subclass
             Entity class for interpreting objects in the stash.
         """
-        h5py.File.__init__(self, name=name, mode=mode, **kwds)
+        h5py.File.__init__(self, name=name, mode=mode, **kwargs)
 
-        if entity is None:
-            entity = Entity
-        self._entity_cls = entity
-
+        if entity_class is None:
+            entity_class = Entity
+        self._entity_cls = entity_class
+        self._cache = cache
+        self.__local__ = dict()
         self._keymap = self.__decode_keymap__()
         self._agu = uniform_hexgen(self.__DEPTH__, self.__WIDTH__)
 
@@ -54,16 +56,27 @@ class Stash(h5py.File):
 
         h5py.File.close(self)
 
-    def get(self, key, deep=False):
-        # TODO(ejhumphrey): Optionally load the Entity's fields deeply.
-        # TODO(ejhumphrey): Don't die so grossly if the key doesn't exist.
-        """Fetch the entity for a given key."""
-        addr = self._keymap.get(key)
+    def __load__(self, key):
+        """Deeply load an entity from the underlying HDF5 file."""
+        addr = self._keymap.get(key, None)
+        if addr is None:
+            return addr
         raw_group = h5py.File.get(self, addr)
         raw_key = raw_group.attrs.get("key")
-        assert raw_key == key, \
-            "Key inconsistency: received '%s', expected '%s'" % (raw_key, key)
+        if raw_key != key:
+            raise ValueError(
+                "Key inconsistency: received '%s'"
+                ", expected '%s'" % (raw_key, key))
+        print "Loading %s" % key
         return self._entity_cls.from_hdf5_group(raw_group)
+
+    def get(self, key):
+        """Fetch the entity for a given key."""
+        value = self.__local__.get(key, self.__load__(key))
+        if self._cache:
+            self.__local__[key] = value
+
+        return value
 
     def add(self, key, entity, overwrite=False):
         """Add a key-entity pair to the File.
@@ -77,6 +90,7 @@ class Stash(h5py.File):
         overwrite: bool, default=False
             Overwrite the key-entity pair if the key currently exists.
         """
+        # TODO(ejhumphrey): update locals!!
         key = str(key)
         if key in self._keymap:
             if not overwrite:
