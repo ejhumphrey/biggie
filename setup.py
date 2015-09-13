@@ -1,4 +1,7 @@
+import imp
 from setuptools import setup
+
+version = imp.load_source('biggie.version', 'biggie/version.py')
 
 long_description = \
     """A python package for storing structs of numpy arrays in a persistent
@@ -8,7 +11,7 @@ long_description = \
 
 setup(
     name='biggie',
-    version='0.0.1',
+    version=version.version,
     description='A library for managing notoriously big data.',
     author='Eric J. Humphrey',
     author_email='ejhumphrey@nyu.edu',
