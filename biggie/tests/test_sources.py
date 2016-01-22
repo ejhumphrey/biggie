@@ -1,76 +1,71 @@
+import pytest
 
-import unittest
 import tempfile as tmp
 import numpy as np
 
 import biggie
 
 
-class TestSources(unittest.TestCase):
-
-    def setUp(self):
-        self.entity = biggie.Entity(
+@pytest.fixture(scope='module')
+def data():
+    class Data(object):
+        entity = biggie.Entity(
             a=3, b='im_a_string', c=[1, 2, 3], d=np.arange(5))
-        self.key = 'my_key'
-        self.fpath = tmp.mktemp(suffix=".hdf5", dir=tmp.gettempdir())
-        fh = biggie.Stash(self.fpath)
-        fh.add(self.key, self.entity)
-        fh.close()
+        key = 'my_key'
+        fpath = tmp.mktemp(suffix=".hdf5", dir=tmp.gettempdir())
 
-    def tearDown(self):
-        pass
+    stash = biggie.Stash(Data.fpath)
+    stash.add(Data.key, Data.entity)
+    stash.close()
 
-    def test_stash_persistence(self):
-        fh = biggie.Stash(self.fpath)
-        loaded_entity = fh.get(self.key)
+    return Data
 
-        self.assertEqual(
-            self.entity.a,
-            loaded_entity.a,
-            "Could not reconstitute entity.a")
 
-        self.assertEqual(
-            self.entity.b.tostring(),
-            loaded_entity.b.tostring(),
-            "Could not reconstitute entity.b")
+def test_stash_persistence(data):
+    stash = biggie.Stash(data.fpath)
+    loaded_entity = stash.get(data.key)
 
-        self.assertEqual(
-            self.entity.c.tolist(),
-            loaded_entity.c.tolist(),
-            "Could not reconstitute entity.c")
+    assert data.entity.a == loaded_entity.a, \
+        "Could not reconstitute entity.a"
 
-        np.testing.assert_array_equal(
-            self.entity.d,
-            loaded_entity.d,
-            "Could not reconstitute entity.d")
+    assert data.entity.b.tostring() == loaded_entity.b.tostring(), \
+        "Could not reconstitute entity.b"
 
-    def test_stash_overwrite(self):
-        fh = biggie.Stash(self.fpath)
-        loaded_entity = fh.get(self.key)
-        loaded_entity.e = 4
-        self.assertRaises(ValueError, fh.add, self.key, loaded_entity)
+    assert data.entity.c.tolist() == loaded_entity.c.tolist(), \
+        "Could not reconstitute entity.c"
 
-        fh.add(self.key, loaded_entity, True)
-        fh.close()
+    np.testing.assert_array_equal(
+        data.entity.d,
+        loaded_entity.d,
+        "Could not reconstitute entity.d")
 
-        fh = biggie.Stash(self.fpath)
-        another_entity = fh.get(self.key)
-        self.assertEqual(len(fh), 1)
-        self.assertEqual(another_entity.e, 4)
 
-    def test_stash_cache(self):
-        fh = biggie.Stash(self.fpath, cache=True)
-        loaded_entity = fh.get(self.key)
+def test_stash_overwrite(data):
+    stash = biggie.Stash(data.fpath)
+    loaded_entity = stash.get(data.key)
+    loaded_entity.e = 4
+    with pytest.raises(ValueError):
+        stash.add(data.key, loaded_entity)
 
-        np.testing.assert_array_equal(
-            self.entity.d,
-            loaded_entity.d,
-            "Could not reconstitute entity.d")
+    stash.add(data.key, loaded_entity, True)
+    stash.close()
 
-        np.testing.assert_array_equal(
-            self.entity.d,
-            fh.__local__[self.key].d,
-            "Failed to cache entity")
+    stash = biggie.Stash(data.fpath)
+    another_entity = stash.get(data.key)
+    assert len(stash) == 1
+    assert another_entity.e == 4
 
-if __name__ == "__main__":
-    unittest.main()
+
+def test_stash_cache(data):
+    stash = biggie.Stash(data.fpath, cache=True)
+    loaded_entity = stash.get(data.key)
+
+    np.testing.assert_array_equal(
+        data.entity.d,
+        loaded_entity.d,
+        "Could not reconstitute entity.d")
+
+    np.testing.assert_array_equal(
+        data.entity.d,
+        stash.__local__[data.key].d,
+        "Failed to cache entity")
