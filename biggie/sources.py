@@ -1,9 +1,12 @@
-import json
+from __future__ import print_function
 import h5py
+import json
+import logging
 import numpy as np
+import pymongo
 
-from .util import uniform_hexgen
-from .core import Entity
+import biggie.core as core
+import biggie.util as util
 
 
 class Stash(h5py.File):
@@ -12,31 +15,33 @@ class Stash(h5py.File):
     __WIDTH__ = 256
     __DEPTH__ = 3
 
-    def __init__(self, name, mode=None, entity_class=None, cache=False,
-                 verbose=False, **kwargs):
-        """
+    def __init__(self, filename, mode=None, cache_size=False,
+                 log_level=logging.INFO, **kwargs):
+        """Create a Stash object, pointing to an hdf5 file on-disk.
+
         Parameters
         ----------
-        name: str
+        filename : str
             Path to file on disk
-        mode: str
-            Filemode for the object.
-        entity: Entity subclass
-            Entity class for interpreting objects in the stash.
-        """
-        h5py.File.__init__(self, name=name, mode=mode, **kwargs)
 
-        if entity_class is None:
-            entity_class = Entity
-        self._entity_cls = entity_class
-        self._cache = cache
-        self._verbose = verbose
+        mode : str
+            Filemode for the object.
+
+        cache : int or False-equivalent, default=False
+
+
+        """
+        super(Stash, self).__init__(name=filename, mode=mode, **kwargs)
+        self._cache_size = cache_size
+        self._logger = logging.getLogger('Stash')
+        self._logger.setLevel(log_level)
+
         self.__local__ = dict()
         self._keymap = self.__decode_keymap__()
-        self._agu = uniform_hexgen(self.__DEPTH__, self.__WIDTH__)
+        self._agu = util.uniform_hexgen(self.__DEPTH__, self.__WIDTH__)
 
     def __decode_keymap__(self):
-        keymap_array = np.array(h5py.File.get(self, self.__KEYMAP__, '{}'))
+        keymap_array = np.array(super(Stash, self).get(self.__KEYMAP__, '{}'))
         return json.loads(keymap_array.tostring())
 
     def __encode_keymap__(self, keymap):
@@ -47,7 +52,7 @@ class Stash(h5py.File):
         # Old h5py consideration, version 2.0.1
         if not hasattr(self.fid, 'valid'):
             return
-        if self.fid.valid:
+        elif self.fid.valid:
             self.close()
 
     def close(self):
@@ -55,30 +60,32 @@ class Stash(h5py.File):
         if self.__KEYMAP__ in self:
             del self[self.__KEYMAP__]
         keymap_str = self.__encode_keymap__(self._keymap)
-        h5py.File.create_dataset(
-            self, name=self.__KEYMAP__, data=keymap_str)
+        super(Stash, self).create_dataset(
+            name=self.__KEYMAP__, data=keymap_str)
 
-        h5py.File.close(self)
+        super(Stash, self).close()
 
     def __load__(self, key):
-        """Deeply load an entity from the underlying HDF5 file."""
+        """Deeply load an entity from the base HDF5 file."""
         addr = self._keymap.get(key, None)
         if addr is None:
             return addr
-        raw_group = h5py.File.get(self, addr)
+        raw_group = super(Stash, self).get(addr)
         raw_key = raw_group.attrs.get("key")
         if raw_key != key:
             raise ValueError(
-                "Key inconsistency: received '%s'"
-                ", expected '%s'" % (raw_key, key))
-        if self._verbose:
-            print "Loading %s" % key
-        return self._entity_cls.from_hdf5_group(raw_group)
+                "Key inconsistency: received '{}'"
+                ", expected '{}'".format(raw_key, key))
+        self._logger.debug("Loading {}".format(key))
+        return core.Entity.from_hdf5_group(raw_group)
 
     def get(self, key):
         """Fetch the entity for a given key."""
         value = self.__local__.get(key, None)
         value = self.__load__(key) if value is None else value
+        if self._cache and len(self.__local__) >= self._cache:
+            # TODO: Pick a value and ditch it.
+            pass
         if self._cache:
             self.__local__[key] = value
 
@@ -133,7 +140,7 @@ class Stash(h5py.File):
         """
         addr = self._keymap.pop(key, None)
         if addr is None:
-            raise ValueError("The key '%s' does not exist." % key)
+            raise ValueError("The key '{}' does not exist.".format(key))
 
         del self[addr]
         return addr
@@ -148,3 +155,14 @@ class Stash(h5py.File):
 
     def __len__(self):
         return len(self.keys())
+
+
+class Collection(object):
+
+    def __init__(self, database, collection, stash_file='', max_items=2**16):
+        self._stash = Stash(stash_file)
+        self._db_conn = None
+
+    @classmethod
+    def from_config(cls, filename):
+        return cls(**json.load(open(filename)))
