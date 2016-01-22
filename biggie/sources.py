@@ -4,6 +4,7 @@ import json
 import logging
 import numpy as np
 import pymongo
+import warnings
 
 import biggie.core as core
 import biggie.util as util
@@ -16,7 +17,7 @@ class Stash(h5py.File):
     __DEPTH__ = 3
 
     def __init__(self, filename, mode=None, cache_size=False,
-                 log_level=logging.INFO, **kwargs):
+                 log_level=logging.INFO):
         """Create a Stash object, pointing to an hdf5 file on-disk.
 
         Parameters
@@ -31,14 +32,20 @@ class Stash(h5py.File):
 
 
         """
-        super(Stash, self).__init__(name=filename, mode=mode, **kwargs)
+        super(Stash, self).__init__(name=filename, mode=mode)
         self._cache_size = cache_size
         self._logger = logging.getLogger('Stash')
         self._logger.setLevel(log_level)
 
         self.__local__ = dict()
         self._keymap = self.__decode_keymap__()
-        self._agu = util.uniform_hexgen(self.__DEPTH__, self.__WIDTH__)
+        self._agu = None
+
+    @property
+    def agu(self):
+        if self._agu is None:
+            self._agu = util.uniform_hexgen(self.__DEPTH__, self.__WIDTH__)
+        return self._agu
 
     def __decode_keymap__(self):
         keymap_array = np.array(super(Stash, self).get(self.__KEYMAP__, '{}'))
@@ -83,10 +90,10 @@ class Stash(h5py.File):
         """Fetch the entity for a given key."""
         value = self.__local__.get(key, None)
         value = self.__load__(key) if value is None else value
-        if self._cache and len(self.__local__) >= self._cache:
+        if self._cache_size > 0 and (len(self.__local__) >= self._cache_size):
             # TODO: Pick a value and ditch it.
             pass
-        if self._cache:
+        if self._cache_size > 0:
             self.__local__[key] = value
 
         return value
@@ -112,10 +119,10 @@ class Stash(h5py.File):
             else:
                 addr = self.remove(key)
         else:
-            addr = self._agu.next()
+            addr = self.agu.next()
 
         while addr in self:
-            addr = self._agu.next()
+            addr = self.agu.next()
 
         self._keymap[key] = addr
         new_grp = self.create_group(addr)
@@ -158,11 +165,79 @@ class Stash(h5py.File):
 
 
 class Collection(object):
+    """Stash controller."""
+    __STASH_KEY__ = '__stash_data__'
 
-    def __init__(self, database, collection, stash_file='', max_items=2**16):
-        self._stash = Stash(stash_file)
-        self._db_conn = None
+    def __init__(self, name,
+                 database='biggie-default', host='localhost', port=None,
+                 stash_kwargs=None):
+
+        # Some combination of the following may be necessary to test for
+        # thread-safety.
+        self.__host__ = host
+        self.__port__ = port
+        self.__database__ = database
+        self.__name__ = name
+
+        self._stash_kwargs = self._collection.find_one(
+            dict(_id=self.__STASH_KEY__), dict(_id=False))
+
+        if not self._stash_kwargs and stash_kwargs:
+            # First time!
+            self._stash_kwargs = dict(_id=self.__STASH_KEY__, **stash_kwargs)
+            # Now check that the data is valid.
+            if not self.stash:
+                raise ValueError(
+                    "Could not instantiate the stash given provided arguments:"
+                    "\n{}".format(self._stash_kwargs))
+            self._collection.insert_one(self._stash_kwargs)
+        elif not any([self._stash_kwargs, stash_kwargs]):
+            warnings.warn(
+                "This Collection lacks a default stash! You will not be able "
+                "to store numpy data!")
+        elif stash_kwargs and self._stash_kwargs != stash_kwargs:
+            raise NotImplementedError(
+                "Recovered stash kwargs conflict with those provided!\n"
+                "Set: {}\n Given:{}".format(self._stash_kwargs, stash_kwargs))
+
+    @property
+    def _collection(self):
+        client = pymongo.mongo_client.MongoClient(self.__host__, self.__port__)
+        db_conn = client.get_database(self.__database__)
+        return db_conn.get_collection(self.__name__)
+
+    @property
+    def name(self):
+        return self._collection.name
+
+    @property
+    def stash(self):
+        """On-demand instantiation of the stash for thread-safeness!"""
+        return Stash(**self._stash_kwargs)
 
     @classmethod
     def from_config(cls, filename):
         return cls(**json.load(open(filename)))
+
+    def insert(self, obj):
+        """
+
+        Note: In traversing the object, all np.ndarray datatypes are migrated
+        to this collection's stash.
+
+        Parameters
+        ----------
+        obj : dict
+            Object to add to the biggie collection.
+
+        """
+        pass
+
+    def get(self, oid):
+        pass
+
+    def find(self, query):
+        pass
+
+    def update(self, oid, update):
+        pass

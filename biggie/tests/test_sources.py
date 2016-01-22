@@ -1,7 +1,8 @@
 import pytest
 
-import tempfile as tmp
+from joblib import Parallel, delayed
 import numpy as np
+import tempfile as tmp
 
 import biggie
 
@@ -57,7 +58,7 @@ def test_stash_overwrite(data):
 
 
 def test_stash_cache(data):
-    stash = biggie.Stash(data.fpath, cache=True)
+    stash = biggie.Stash(data.fpath, cache_size=100)
     loaded_entity = stash.get(data.key)
 
     np.testing.assert_array_equal(
@@ -69,3 +70,16 @@ def test_stash_cache(data):
         data.entity.d,
         stash.__local__[data.key].d,
         "Failed to cache entity")
+
+
+def test_Collection___init__():
+    collec = biggie.Collection('test')
+    assert collec is not None
+
+
+def test_Collection___init__with_stash():
+    collec = biggie.Collection(
+        name='test',
+        stash_kwargs=dict(filename='/tmp/deleteme.hdf5'))
+    assert collec is not None
+    assert collec.stash is not None
