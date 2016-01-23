@@ -23,6 +23,34 @@ def data():
     return Sample
 
 
+def test_Field___init__():
+    pass
+
+
+def test_Field_value():
+    pass
+
+
+def test_Field_value_setter():
+    pass
+
+
+def test_Field_from_hdf5_dataset():
+    pass
+
+
+def test_LazyField___init__():
+    pass
+
+
+def test_LazyField_value():
+    pass
+
+
+def test_LazyField_attrs():
+    pass
+
+
 def test_Entity_getitem(data):
     assert data.e.a == data.e['a'].value, \
         "Failed to initialize keys / attributes."
@@ -60,7 +88,6 @@ def test_Entity_keys(data):
 
 
 def test_Entity_values():
-    # TODO: This test could be better, matching c & d are tough.
     data = biggie.Entity(a=0, b=1, c=2, d=3)
     values = list(range(4))
     exp_values = [data[k].value for k in 'abcd']

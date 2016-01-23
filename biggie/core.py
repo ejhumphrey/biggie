@@ -13,9 +13,7 @@ import six
 
 
 class Field(object):
-    """Data wrapper.
-
-    You should seldom, if ever, need to create Fields explicitly.
+    """Data value wrapper.
 
     TODO: In the future, be a bit more clever about caching data types in
     the `attrs` attribute.
@@ -39,27 +37,25 @@ class Field(object):
 
     @property
     def value(self):
-        value = self._value
-        if isinstance(value, np.ndarray) and value.dtype.type is np.str_:
-            self._value = str(value)
         return self._value
 
     @value.setter
     def value(self, value):
-        """All values get mapped through numpy datatypes for h5py safety."""
-        self._value = np.asarray(value)
+        """Lists get mapped through numpy datatypes for h5py safety."""
+        if isinstance(value, list):
+            value = np.asarray(value)
+        self._value = value
 
     @classmethod
     def from_hdf5_dataset(cls, hdf5_dataset):
         """This might be poor practice."""
-        return _LazyField(hdf5_dataset)
+        return LazyField(hdf5_dataset)
 
 
-class _LazyField(Field):
+class LazyField(Field):
     """Lazy-loading Field for reading data from HDF5 files.
 
-    Note: Do not use directly. This class provides a common interface with
-    Fields, but only returns information as needed, wrapping h5py types."""
+    Like a Field, but returns information as needed, wrapping h5py types."""
     def __init__(self, hdf5_dataset):
         self._dataset = hdf5_dataset
         self._value = None
@@ -69,8 +65,9 @@ class _LazyField(Field):
     def value(self):
         """LazyFields only pull data into the namespace when accessed."""
         if self._value is None:
-            self._value = np.asarray(self._dataset.value)
-        return super(_LazyField, self).value
+            # self._value = np.asarray(self._dataset.value)
+            self._value = self._dataset.value
+        return super(LazyField, self).value
 
     @property
     def attrs(self):
@@ -137,7 +134,7 @@ class Entity(object):
     def __getattribute__(self, key):
         """Unnecessary, but could make Fields more transparent?"""
         obj = object.__getattribute__(self, key)
-        if isinstance(obj, Field) or isinstance(obj, _LazyField):
+        if isinstance(obj, Field) or isinstance(obj, LazyField):
             # Back out Fields transparently.
             obj = obj.value
         return obj
@@ -166,5 +163,5 @@ class Entity(object):
         """writeme."""
         new_grp = cls()
         for key in group:
-            new_grp.__dict__[key] = _LazyField(group[key])
+            new_grp.__dict__[key] = Field.from_hdf5_dataset(group[key])
         return new_grp
