@@ -1,11 +1,51 @@
 import pytest
 
+import h5py
 from joblib import Parallel, delayed
+import json
 import numpy as np
 import tempfile as tmp
 
 import biggie
 import biggie.util as util
+
+
+def test_Stash__init__():
+    fp = tmp.NamedTemporaryFile(suffix=".hdf5")
+    stash = biggie.Stash(fp.name)
+    assert stash is not None
+
+
+def test_Stash___load_keymap__():
+    fp = tmp.NamedTemporaryFile(suffix=".hdf5")
+    fh = h5py.File(fp.name)
+    keymap = dict(test='00')
+    fh[biggie.Stash.__KEYMAP__] = json.dumps(keymap)
+
+    fh = biggie.Stash(fp.name)
+    assert fh._keymap == keymap
+
+
+def test_Stash___dump_keymap__():
+    fp = tmp.NamedTemporaryFile(suffix=".hdf5")
+    stash = biggie.Stash(fp.name)
+    keymap = dict(test='00')
+    stash._keymap = keymap
+    stash.close()
+
+    fh = h5py.File(fp.name)
+    dset = fh.get(biggie.Stash.__KEYMAP__)
+    assert dset.value == json.dumps(keymap)
+
+
+def test_Stash_add():
+    fp = tmp.NamedTemporaryFile(suffix=".hdf5")
+    stash = biggie.Stash(fp.name)
+
+    key = 'foo'
+    entity = biggie.Entity(a=3, b='im_a_string', c=[1, 2, 3], d=np.arange(5))
+    stash.add(key, entity)
+    assert key in stash.keys()
 
 
 @pytest.fixture(scope='module')
@@ -22,7 +62,7 @@ def data():
     return Data
 
 
-def test_Stash_persistence(data):
+def test_Stash_get(data):
     stash = biggie.Stash(data.fp.name)
     loaded_entity = stash.get(data.key)
 

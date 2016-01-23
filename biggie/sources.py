@@ -1,10 +1,12 @@
+"""
+"""
+
 from __future__ import print_function
 import h5py
 import json
 import logging
 import numpy as np
 import pymongo
-import six
 import warnings
 
 import biggie.core as core
