@@ -70,7 +70,7 @@ class _LazyField(Field):
         """LazyFields only pull data into the namespace when accessed."""
         if self._value is None:
             self._value = np.asarray(self._dataset.value)
-        return super(_LazyField, self).value()
+        return super(_LazyField, self).value
 
     @property
     def attrs(self):

@@ -28,9 +28,11 @@ class Stash(h5py.File):
         mode : str
             Filemode for the object.
 
-        cache : int or False-equivalent, default=False
+        cache_size : int or False-equivalent, default=False
+            Number of items to keep cached internally (for speed).
 
-
+        log_level : int, default=logging.INFO
+            Level for setting the internal logger; see logging.X for more info.
         """
         super(Stash, self).__init__(name=filename, mode=mode)
         self._cache_size = cache_size
@@ -99,15 +101,17 @@ class Stash(h5py.File):
         return value
 
     def add(self, key, entity, overwrite=False):
-        """Add a key-entity pair to the File.
+        """Add a key-entity pair to the Stash.
 
         Parameters
         ----------
-        key: str
+        key : str
             Key to write the value under.
-        entity: Entity
+
+        entity : Entity
             Object to write to file.
-        overwrite: bool, default=False
+
+        overwrite : bool, default=False
             Overwrite the key-entity pair if the key currently exists.
         """
         # TODO(ejhumphrey): update locals!!
@@ -115,7 +119,8 @@ class Stash(h5py.File):
         if key in self._keymap:
             if not overwrite:
                 raise ValueError(
-                    "Data exists for '%s'; did you mean overwrite=True?" % key)
+                    "Data exists for '{}'; did you mean `overwrite=True?`"
+                    "".format(key))
             else:
                 addr = self.remove(key)
         else:
@@ -131,6 +136,42 @@ class Stash(h5py.File):
             new_dset = new_grp.create_dataset(name=dset_key, data=dset.value)
             for k, v in new_dset.attrs.iteritems():
                 dset.attrs.create(name=k, data=v)
+
+    def add_ndarray(self, key, ndarray, overwrite=False):
+        """Add a key-entity pair to the Stash.
+
+        Parameters
+        ----------
+        key : str or None
+            Key to write the value under; if None, will generate one.
+
+        ndarray : np.ndarray
+            Numpy array to write.
+
+        overwrite : bool, default=False
+            Overwrite the key-ndarray pair, iff the key currently exists.
+        """
+        # TODO(ejhumphrey): update locals!!
+        key = str(key) if key else key
+        if key and key in self._keymap:
+            if not overwrite:
+                raise ValueError(
+                    "Data exists for '{}'; did you mean `overwrite=True?`"
+                    "".format(key))
+            else:
+                addr = self.remove(key)
+        else:
+            addr = self.agu.next()
+
+        while addr in self:
+            addr = self.agu.next()
+
+        if not key:
+            key = addr
+
+        self._keymap[key] = addr
+        new_dset = self.create_dataset(addr, data=ndarray)
+        new_dset.attrs.create(name='key', data=key)
 
     def remove(self, key):
         """Delete a key-entity pair from the stash.

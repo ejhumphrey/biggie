@@ -5,6 +5,7 @@ import numpy as np
 import tempfile as tmp
 
 import biggie
+import biggie.util as util
 
 
 @pytest.fixture(scope='module')
@@ -22,14 +23,14 @@ def data():
     return Data
 
 
-def test_stash_persistence(data):
+def test_Stash_persistence(data):
     stash = biggie.Stash(data.fpath)
     loaded_entity = stash.get(data.key)
 
     assert data.entity.a == loaded_entity.a, \
         "Could not reconstitute entity.a"
 
-    assert data.entity.b.tostring() == loaded_entity.b.tostring(), \
+    assert data.entity.b == loaded_entity.b, \
         "Could not reconstitute entity.b"
 
     assert data.entity.c.tolist() == loaded_entity.c.tolist(), \
@@ -41,7 +42,7 @@ def test_stash_persistence(data):
         "Could not reconstitute entity.d")
 
 
-def test_stash_overwrite(data):
+def test_Stash_overwrite(data):
     stash = biggie.Stash(data.fpath)
     loaded_entity = stash.get(data.key)
     loaded_entity.e = 4
@@ -57,7 +58,7 @@ def test_stash_overwrite(data):
     assert another_entity.e == 4
 
 
-def test_stash_cache(data):
+def test_Stash_cache(data):
     stash = biggie.Stash(data.fpath, cache_size=100)
     loaded_entity = stash.get(data.key)
 
@@ -70,6 +71,10 @@ def test_stash_cache(data):
         data.entity.d,
         stash.__local__[data.key].d,
         "Failed to cache entity")
+
+
+def test_Stash_thread_safe():
+    pass
 
 
 def test_Collection___init__():
