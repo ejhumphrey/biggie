@@ -1,5 +1,6 @@
 """Utility functions."""
 import numpy as np
+import uuid
 
 
 def expand_hex(hexval, width):
@@ -23,9 +24,11 @@ def expand_hex(hexval, width):
     digits required to represent the number.
     """
     chars = hexval[2:]
-    assert width >= len(chars), \
-        "Received: %s. Width (%d) must be >= %d." % (hexval, width, len(chars))
-    y = list('0x' + '0' * width)
+    if width < len(chars):
+        raise ValueError(
+            "Received: `hexval={}`. Width ({}) must be >= {}."
+            "".format(hexval, width, len(chars)))
+    y = list('0x' + '0' * int(width))
     y[-len(chars):] = list(chars)
     return "".join(y)
 
@@ -48,8 +51,8 @@ def index_to_hexkey(index, depth):
         Slash-separated hex-key.
     """
     hx = expand_hex(hex(int(index)), depth * 2)
-    tmp = ''.join(
-        [''.join(d) for d in zip(hx[::2], hx[1::2], '/' * (len(hx) / 2))])
+    chars = zip(hx[::2], hx[1::2], '/' * int(len(hx) / 2))
+    tmp = ''.join([''.join(d) for d in chars])
     return tmp[3:-1]
 
 
@@ -75,7 +78,7 @@ def uniform_hexgen(depth, width=256):
     """
     max_index = width ** depth
     index = 0
-    for index in xrange(max_index):
+    for index in range(max_index):
         v = expand_hex(hex(index), depth * 2)
         hexval = "0x" + "".join([a + b for a, b in zip(v[-2:1:-2], v[:1:-2])])
         yield index_to_hexkey(int(hexval, 16), depth)
@@ -110,3 +113,45 @@ def unpack_entity_list(entities, filter_nulls=True):
     for k in data:
         data[k] = np.asarray(data[k])
     return data
+
+
+# def dump(obj, stash):
+#     filtered_dict = dict()
+
+#     for k, value in six.iteritems(obj.items()):
+#         if k.startswith('_'):
+#             continue
+
+#         if isinstance(value, np.ndarray):
+#             filtered_dict[k] = item.__json__
+#         else:
+#             filtered_dict[k] = item
+
+#     return filtered_dict
+
+
+def random_ndarrays(num_items, shape, dtype=np.float64, seed=12345):
+    """Produce a number of key-value, normally distributed ndarrays.
+
+    Parameters
+    ----------
+    num_items : int
+        Number of ndarrays to produce
+
+    shape : array_like
+        Shape of the ndarrays to produce.
+
+    dtype : type, default=np.float64
+        Datatype of the ndarrays.
+
+    seed : int, default=12345
+        Seed for the random number generator.
+
+    Returns
+    -------
+    ndarrays : dict of np.ndarrays
+        Random value ndarrays.
+    """
+    rng = np.random.RandomState(seed)
+    return dict((uuid.uuid4(), rng.normal(shape, dtype=dtype))
+                for _ in range(num_items))
