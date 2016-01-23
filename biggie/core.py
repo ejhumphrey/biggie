@@ -156,7 +156,7 @@ class Entity(object):
 
     def items(self):
         """Return the (key, value) items of the entity."""
-        return dict([(k, getattr(self, k)) for k in self.keys()])
+        return [(k, getattr(self, k)) for k in self.keys()]
 
     @classmethod
     def from_hdf5_group(cls, group):

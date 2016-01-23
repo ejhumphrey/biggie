@@ -95,9 +95,11 @@ def test_Entity_values():
 
 
 def test_Entity_items(data):
-    # TODO: This test could be better, matching c & d are tough.
-    items = sorted(data.e.items())
-    exp_items = [(k, getattr(data, k)) for k in 'abcd']
+    items = dict(data.e.items())
+    exp_items = dict([(k, getattr(data, k)) for k in 'abcd'])
     assert len(items) == len(exp_items)
-    assert exp_items[0] == ('a', data.a)
-    assert exp_items[1] == ('b', data.b)
+    assert items['a'] == exp_items['a']
+    assert items['b'] == exp_items['b']
+    assert items['c'].tolist() == exp_items['c']
+    np.testing.assert_array_equal(
+        items['d'], exp_items['d'], "Failed to initialize a numpy array.")
