@@ -174,12 +174,25 @@ def stash_fp(request):
 
 
 @pytest.mark.benchmark
-def test_Stash_stress_random_access(benchmark, stash_fp):
+def test_Stash_stress_random(benchmark, stash_fp):
     """Stress test random-access reads on a Stash file."""
     stash = biggie.Stash(stash_fp.name, cache_size=0)
     assert benchmark(touch_one, stash, keys=stash.keys())
-    stash.close()
-    stash_fp.close()
+    # stash.close()
+    # stash_fp.close()
+
+
+@pytest.mark.benchmark
+def test_Stash_stress_ordered(benchmark, stash_fp):
+    """Stress test random-access reads on a Stash file."""
+    stash = biggie.Stash(stash_fp.name, cache_size=0)
+    # print(list(stash._keymap.items()))
+    addrmap = sorted([(a, k) for k, a in stash._keymap.items()])
+    print(addrmap[:5])
+    keys = [pair[1] for pair in addrmap]
+    assert benchmark(touch_one, stash, keys=keys)
+    # stash.close()
+    # stash_fp.close()
 
 
 @pytest.fixture(params=data_params,
@@ -188,7 +201,6 @@ def test_Stash_stress_random_access(benchmark, stash_fp):
 def npz_dir(request):
     """Populate a directory of NPZ files."""
     tdir = tmp.TemporaryDirectory()
-
     data_gen = util.random_ndarray_generator(
         request.param[1], max_items=request.param[0])
     for basename, value in data_gen:
@@ -207,11 +219,28 @@ def touch_one_npz(fpaths=None, fpath=None):
 
 
 @pytest.mark.benchmark
-def test_npz_stress_random_access(benchmark, npz_dir):
+def test_npz_stress_random(benchmark, npz_dir):
     """Stress test random-access reads on NPZ archives."""
     fpaths = glob.glob(os.path.join(npz_dir.name, "*.npz"))
     assert benchmark(touch_one_npz, fpaths=fpaths)
-    npz_dir.cleanup()
+    # npz_dir.cleanup()
+
+
+# Helper function
+def touch_next_npz(fpaths):
+    fpath = fpaths.pop(0)
+    arc = np.load(fpath)
+    np.asarray(arc['data'])
+    fpaths.append(fpath)
+    return True
+
+
+@pytest.mark.benchmark
+def test_npz_stress_ordered(benchmark, npz_dir):
+    """Stress test random-access reads on NPZ archives."""
+    fpaths = sorted(glob.glob(os.path.join(npz_dir.name, "*.npz")))
+    assert benchmark(touch_next_npz, fpaths=fpaths)
+    # npz_dir.cleanup()
 
 # @pytest.mark.benchmark
 # def test_Stash__fhandle(benchmark, stash_fp):
