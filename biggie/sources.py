@@ -20,7 +20,7 @@ class Stash(object):
     __DEPTH__ = 3
 
     def __init__(self, filename, mode=None, cache_size=False,
-                 log_level=logging.INFO):
+                 log_level=logging.INFO, refresh_handle=False):
         """Create a Stash object, pointing to an hdf5 file on-disk.
 
         Parameters
@@ -39,60 +39,65 @@ class Stash(object):
         """
         self._filename = filename
         self._mode = mode
+        self._refresh_handle = refresh_handle
+        self.__handle__ = None
         self._cache_size = cache_size
-        self._logger = logging.getLogger('Stash')
-        self._logger.setLevel(log_level)
-
-        self.__load_keymap__()
         self.__local__ = dict()
         self._agu = None
 
+        self._logger = logging.getLogger('Stash')
+        self._logger.setLevel(log_level)
+        self.__load_keymap__()
+
     @property
-    def __handle__(self):
-        return h5py.File(name=self._filename, mode=self._mode)
+    def _fhandle(self):
+        fh = None
+        if self.__handle__ is None:
+            fh = h5py.File(name=self._filename, mode=self._mode)
+        if not self._refresh_handle and fh:
+            self.__handle__ = fh
+        return self.__handle__ if self.__handle__ is not None else fh
 
     def __load_keymap__(self):
-        if self.__KEYMAP__ not in self.__handle__:
+        if self.__KEYMAP__ not in self._fhandle:
             self._keymap = dict()
         else:
-            keymap_dset = self.__handle__.get(self.__KEYMAP__)
+            keymap_dset = self._fhandle.get(self.__KEYMAP__)
             self._keymap = json.loads(str(keymap_dset.value))
 
     def __dump_keymap__(self):
-        if self.__KEYMAP__ in self.__handle__:
-            del self.__handle__[self.__KEYMAP__]
+        if self.__KEYMAP__ in self._fhandle:
+            del self._fhandle[self.__KEYMAP__]
 
-        self.__handle__.create_dataset(
+        self._fhandle.create_dataset(
             name=self.__KEYMAP__,
             data=np.str(json.dumps(self._keymap)))
 
     @property
     def agu(self):
+        """Currently, this lil guy causes problems with parallelization.
+
+        TODO: The AGU should be superseded by a "figure-out-the-next-address"
+        function, based on the state of the keymap. In the meantime, converting
+        the generator to a class might suffice...
+        """
         if self._agu is None:
             self._agu = util.uniform_hexgen(self.__DEPTH__, self.__WIDTH__)
         return self._agu
 
     def __del__(self):
         """Safe default destructor"""
-        # Old h5py consideration, version 2.0.1
-        # if not hasattr(self.fid, 'valid'):
-        #     return
-        # elif self.fid.valid:
         self.close()
 
     def close(self):
         """write keys and paths to disk"""
         self.__dump_keymap__()
-        self.__handle__.close()
+        self._fhandle.close()
 
     def __load__(self, key):
         """Deeply load an entity from the base HDF5 file."""
-        addr = self._keymap.get(key, None)
-        if addr is None:
-            raise KeyError(
-                "Stash doesn't contain an item for `{}`".format(key))
-
-        raw_group = self.__handle__.get(addr)
+        addr = self._keymap[key]
+        raw_group = self._fhandle.get(addr)
         raw_key = raw_group.attrs.get("key")
         if raw_key != key:
             raise ValueError("Key inconsistency: received '{}'"
@@ -153,12 +158,12 @@ class Stash(object):
         else:
             addr = next(self.agu)
 
-        while addr in self.__handle__:
+        while addr in self._fhandle:
             addr = next(self.agu)
 
         self._keymap[key] = addr
 
-        grp = self.__handle__.create_group(addr)
+        grp = self._fhandle.create_group(addr)
         grp.attrs['key'] = key
         for field, value in entity.items():
             grp.create_dataset(name=field, data=value)
@@ -182,7 +187,7 @@ class Stash(object):
         if addr is None:
             raise KeyError("The key '{}' does not exist.".format(key))
 
-        del self.__handle__[addr]
+        del self._fhandle[addr]
         return addr
 
     def keys(self):

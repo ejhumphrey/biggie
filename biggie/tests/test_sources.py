@@ -1,10 +1,11 @@
 import pytest
-# import benchmark
 
+import glob
 import h5py
 from joblib import Parallel, delayed
 import json
 import numpy as np
+import os
 import tempfile as tmp
 
 import biggie
@@ -123,9 +124,10 @@ def test_Stash_cache(data):
 
 # Helper function
 def touch_one(stash, keys=None, key=None):
-    key = np.random.choice(keys) if keys else key
+    key = np.random.choice(list(keys)) if keys else key
     entity = stash.get(key)
     np.asarray(entity.data)
+    # entity.data
     return True
 
 
@@ -140,21 +142,31 @@ def test_Stash_thread_safe():
 
     pool = Parallel(n_jobs=2)
     fx = delayed(touch_one)
-
-    # TODO: Necessary hack for parallelization.
-    del stash._agu
-
+    stash = biggie.Stash(fp.name, cache_size=0)
     res = pool(fx(stash=stash, key=key) for key in stash.keys())
     assert all(res)
 
 
-@pytest.fixture(params=[10, 100, 1000, 10000, 50000, 100000],
+data_params = [(10, (64, 64)),
+               (100, (64, 64)),
+               (1000, (64, 64)),
+               (10000, (64, 64)),
+               (10, (1024, 128)),
+               (100, (1024, 128)),
+               (1000, (1024, 128)),
+               (10000, (1024, 128))]
+
+
+@pytest.fixture(params=data_params,
+                ids=["(n={}, ndim={})".format(*p) for p in data_params],
                 scope="module",)
 def stash_fp(request):
+    """Populate a temporary stash file with data."""
     fp = tmp.NamedTemporaryFile(suffix=".hdf5")
     stash = biggie.Stash(fp.name, cache_size=0)
-    shape = (64, 64)
-    data_gen = util.random_ndarray_generator(shape, max_items=request.param)
+
+    data_gen = util.random_ndarray_generator(
+        request.param[1], max_items=request.param[0])
     for key, value in data_gen:
         stash.add(key, biggie.Entity(data=value))
     stash.close()
@@ -163,18 +175,51 @@ def stash_fp(request):
 
 @pytest.mark.benchmark
 def test_Stash_stress_random_access(benchmark, stash_fp):
-    """Stress test random-access reads."""
+    """Stress test random-access reads on a Stash file."""
     stash = biggie.Stash(stash_fp.name, cache_size=0)
-    assert benchmark(touch_one, stash, keys=list(stash.keys()))
+    assert benchmark(touch_one, stash, keys=stash.keys())
+    stash.close()
+    stash_fp.close()
+
+
+@pytest.fixture(params=data_params,
+                ids=["(n={}, ndim={})".format(*p) for p in data_params],
+                scope="module",)
+def npz_dir(request):
+    """Populate a directory of NPZ files."""
+    tdir = tmp.TemporaryDirectory()
+
+    data_gen = util.random_ndarray_generator(
+        request.param[1], max_items=request.param[0])
+    for basename, value in data_gen:
+        fout = os.path.join(tdir.name, "{}.npz".format(basename))
+        np.savez(fout, data=value)
+
+    return tdir
+
+
+# Helper function
+def touch_one_npz(fpaths=None, fpath=None):
+    fpath = np.random.choice(fpaths) if fpaths else fpath
+    arc = np.load(fpath)
+    np.asarray(arc['data'])
+    return True
 
 
 @pytest.mark.benchmark
-def test_Stash___handle__(benchmark, stash_fp):
-    def verify_handle(stash):
-        return stash.__handle__ is not None
+def test_npz_stress_random_access(benchmark, npz_dir):
+    """Stress test random-access reads on NPZ archives."""
+    fpaths = glob.glob(os.path.join(npz_dir.name, "*.npz"))
+    assert benchmark(touch_one_npz, fpaths=fpaths)
+    npz_dir.cleanup()
 
-    stash = biggie.Stash(stash_fp.name, cache_size=0)
-    assert benchmark(verify_handle, stash)
+# @pytest.mark.benchmark
+# def test_Stash__fhandle(benchmark, stash_fp):
+#     def verify_handle(stash):
+#         return stash._fhandle is not None
+
+#     stash = biggie.Stash(stash_fp.name, cache_size=0)
+#     assert benchmark(verify_handle, stash)
 
 
 # def test_Collection___init__():
