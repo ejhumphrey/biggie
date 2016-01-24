@@ -178,8 +178,6 @@ def test_Stash_stress_random(benchmark, stash_fp):
     """Stress test random-access reads on a Stash file."""
     stash = biggie.Stash(stash_fp.name, cache_size=0)
     assert benchmark(touch_one, stash, keys=stash.keys())
-    # stash.close()
-    # stash_fp.close()
 
 
 @pytest.mark.benchmark
@@ -191,8 +189,8 @@ def test_Stash_stress_ordered(benchmark, stash_fp):
     print(addrmap[:5])
     keys = [pair[1] for pair in addrmap]
     assert benchmark(touch_one, stash, keys=keys)
-    # stash.close()
-    # stash_fp.close()
+    stash.close()
+    stash_fp.close()
 
 
 @pytest.fixture(params=data_params,
@@ -223,7 +221,6 @@ def test_npz_stress_random(benchmark, npz_dir):
     """Stress test random-access reads on NPZ archives."""
     fpaths = glob.glob(os.path.join(npz_dir.name, "*.npz"))
     assert benchmark(touch_one_npz, fpaths=fpaths)
-    # npz_dir.cleanup()
 
 
 # Helper function
@@ -240,7 +237,7 @@ def test_npz_stress_ordered(benchmark, npz_dir):
     """Stress test random-access reads on NPZ archives."""
     fpaths = sorted(glob.glob(os.path.join(npz_dir.name, "*.npz")))
     assert benchmark(touch_next_npz, fpaths=fpaths)
-    # npz_dir.cleanup()
+    npz_dir.cleanup()
 
 # @pytest.mark.benchmark
 # def test_Stash__fhandle(benchmark, stash_fp):
