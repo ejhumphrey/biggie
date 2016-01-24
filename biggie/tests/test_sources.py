@@ -121,55 +121,60 @@ def test_Stash_cache(data):
         "Failed to cache entity")
 
 
-# def test_Stash_thread_safe():
-
-#     def test_access():
-#         pass
-#     pool = Parallel(2)
-#     fx = delayed(test_access)
-#     res = pool(fx())
-
 # Helper function
-def touch_one(stash, keys):
-    entity = stash.get(np.random.choice(keys))
+def touch_one(stash, keys=None, key=None):
+    key = np.random.choice(keys) if keys else key
+    entity = stash.get(key)
     np.asarray(entity.data)
     return True
 
 
-@pytest.mark.benchmark
-def test_Stash_stress_random_access_10e3(benchmark):
-    """Stress test random-access reads."""
+@pytest.mark.unit
+def test_Stash_thread_safe():
     fp = tmp.NamedTemporaryFile(suffix=".hdf5")
     stash = biggie.Stash(fp.name, cache_size=0)
     shape = (64, 64)
-    for key, value in util.random_ndarray_generator(shape,
-                                                    max_items=1000):
+    data_gen = util.random_ndarray_generator(shape, max_items=25)
+    for key, value in data_gen:
         stash.add(key, biggie.Entity(data=value))
 
-    stash.close()
-    stash = biggie.Stash(fp.name, cache_size=0)
+    pool = Parallel(n_jobs=2)
+    fx = delayed(touch_one)
 
-    result = benchmark(touch_one, stash, list(stash.keys()))
+    # TODO: Necessary hack for parallelization.
+    del stash._agu
 
-    assert result < 100
+    res = pool(fx(stash=stash, key=key) for key in stash.keys())
+    assert all(res)
 
 
-@pytest.mark.benchmark
-def test_Stash_stress_random_access_10e4(benchmark):
-    """Stress test random-access reads."""
+@pytest.fixture(params=[10, 100, 1000, 10000, 50000, 100000],
+                scope="module",)
+def stash_fp(request):
     fp = tmp.NamedTemporaryFile(suffix=".hdf5")
     stash = biggie.Stash(fp.name, cache_size=0)
     shape = (64, 64)
-    for key, value in util.random_ndarray_generator(shape,
-                                                    max_items=10000):
+    data_gen = util.random_ndarray_generator(shape, max_items=request.param)
+    for key, value in data_gen:
         stash.add(key, biggie.Entity(data=value))
-
     stash.close()
-    stash = biggie.Stash(fp.name, cache_size=0)
+    return fp
 
-    result = benchmark(touch_one, stash, list(stash.keys()))
 
-    assert result
+@pytest.mark.benchmark
+def test_Stash_stress_random_access(benchmark, stash_fp):
+    """Stress test random-access reads."""
+    stash = biggie.Stash(stash_fp.name, cache_size=0)
+    assert benchmark(touch_one, stash, keys=list(stash.keys()))
+
+
+@pytest.mark.benchmark
+def test_Stash___handle__(benchmark, stash_fp):
+    def verify_handle(stash):
+        return stash.__handle__ is not None
+
+    stash = biggie.Stash(stash_fp.name, cache_size=0)
+    assert benchmark(verify_handle, stash)
 
 
 # def test_Collection___init__():

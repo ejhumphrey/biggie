@@ -13,7 +13,7 @@ import biggie.core as core
 import biggie.util as util
 
 
-class Stash(h5py.File):
+class Stash(object):
     """On-disk dictionary-like object."""
     __KEYMAP__ = "__KEYMAP__"
     __WIDTH__ = 256
@@ -37,7 +37,8 @@ class Stash(h5py.File):
         log_level : int, default=logging.INFO
             Level for setting the internal logger; see logging.X for more info.
         """
-        super(Stash, self).__init__(name=filename, mode=mode)
+        self._filename = filename
+        self._mode = mode
         self._cache_size = cache_size
         self._logger = logging.getLogger('Stash')
         self._logger.setLevel(log_level)
@@ -46,17 +47,22 @@ class Stash(h5py.File):
         self.__local__ = dict()
         self._agu = None
 
+    @property
+    def __handle__(self):
+        return h5py.File(name=self._filename, mode=self._mode)
+
     def __load_keymap__(self):
-        if self.__KEYMAP__ not in self:
+        if self.__KEYMAP__ not in self.__handle__:
             self._keymap = dict()
         else:
-            keymap_dset = super(Stash, self).get(self.__KEYMAP__)
+            keymap_dset = self.__handle__.get(self.__KEYMAP__)
             self._keymap = json.loads(str(keymap_dset.value))
 
     def __dump_keymap__(self):
-        if self.__KEYMAP__ in self:
-            del self[self.__KEYMAP__]
-        self.create_dataset(
+        if self.__KEYMAP__ in self.__handle__:
+            del self.__handle__[self.__KEYMAP__]
+
+        self.__handle__.create_dataset(
             name=self.__KEYMAP__,
             data=np.str(json.dumps(self._keymap)))
 
@@ -77,7 +83,7 @@ class Stash(h5py.File):
     def close(self):
         """write keys and paths to disk"""
         self.__dump_keymap__()
-        super(Stash, self).close()
+        self.__handle__.close()
 
     def __load__(self, key):
         """Deeply load an entity from the base HDF5 file."""
@@ -86,7 +92,7 @@ class Stash(h5py.File):
             raise KeyError(
                 "Stash doesn't contain an item for `{}`".format(key))
 
-        raw_group = super(Stash, self).get(addr)
+        raw_group = self.__handle__.get(addr)
         raw_key = raw_group.attrs.get("key")
         if raw_key != key:
             raise ValueError("Key inconsistency: received '{}'"
@@ -147,12 +153,12 @@ class Stash(h5py.File):
         else:
             addr = next(self.agu)
 
-        while addr in self:
+        while addr in self.__handle__:
             addr = next(self.agu)
 
         self._keymap[key] = addr
 
-        grp = self.create_group(addr)
+        grp = self.__handle__.create_group(addr)
         grp.attrs['key'] = key
         for field, value in entity.items():
             grp.create_dataset(name=field, data=value)
@@ -176,7 +182,7 @@ class Stash(h5py.File):
         if addr is None:
             raise KeyError("The key '{}' does not exist.".format(key))
 
-        del self[addr]
+        del self.__handle__[addr]
         return addr
 
     def keys(self):
