@@ -1,4 +1,5 @@
 import pytest
+# import benchmark
 
 import h5py
 from joblib import Parallel, delayed
@@ -10,12 +11,14 @@ import biggie
 import biggie.util as util
 
 
+@pytest.mark.unit
 def test_Stash__init__():
     fp = tmp.NamedTemporaryFile(suffix=".hdf5")
     stash = biggie.Stash(fp.name)
     assert stash is not None
 
 
+@pytest.mark.unit
 def test_Stash___load_keymap__():
     fp = tmp.NamedTemporaryFile(suffix=".hdf5")
     fh = h5py.File(fp.name)
@@ -26,6 +29,7 @@ def test_Stash___load_keymap__():
     assert fh._keymap == keymap
 
 
+@pytest.mark.unit
 def test_Stash___dump_keymap__():
     fp = tmp.NamedTemporaryFile(suffix=".hdf5")
     stash = biggie.Stash(fp.name)
@@ -38,6 +42,7 @@ def test_Stash___dump_keymap__():
     assert dset.value == json.dumps(keymap)
 
 
+@pytest.mark.unit
 def test_Stash_add():
     fp = tmp.NamedTemporaryFile(suffix=".hdf5")
     stash = biggie.Stash(fp.name)
@@ -48,6 +53,7 @@ def test_Stash_add():
     assert key in stash.keys()
 
 
+@pytest.mark.unit
 @pytest.fixture(scope='module')
 def data():
     class Data(object):
@@ -62,6 +68,7 @@ def data():
     return Data
 
 
+@pytest.mark.unit
 def test_Stash_get(data):
     stash = biggie.Stash(data.fp.name)
     loaded_entity = stash.get(data.key)
@@ -81,6 +88,7 @@ def test_Stash_get(data):
         "Could not reconstitute entity.d")
 
 
+@pytest.mark.unit
 def test_Stash_overwrite(data):
     stash = biggie.Stash(data.fp.name)
     loaded_entity = stash.get(data.key)
@@ -97,6 +105,7 @@ def test_Stash_overwrite(data):
     assert another_entity.e == 4
 
 
+@pytest.mark.unit
 def test_Stash_cache(data):
     stash = biggie.Stash(data.fp.name, cache_size=100)
     loaded_entity = stash.get(data.key)
@@ -112,8 +121,55 @@ def test_Stash_cache(data):
         "Failed to cache entity")
 
 
-def test_Stash_thread_safe():
-    pass
+# def test_Stash_thread_safe():
+
+#     def test_access():
+#         pass
+#     pool = Parallel(2)
+#     fx = delayed(test_access)
+#     res = pool(fx())
+
+# Helper function
+def touch_one(stash, keys):
+    entity = stash.get(np.random.choice(keys))
+    np.asarray(entity.data)
+    return True
+
+
+@pytest.mark.benchmark
+def test_Stash_stress_random_access_10e3(benchmark):
+    """Stress test random-access reads."""
+    fp = tmp.NamedTemporaryFile(suffix=".hdf5")
+    stash = biggie.Stash(fp.name, cache_size=0)
+    shape = (64, 64)
+    for key, value in util.random_ndarray_generator(shape,
+                                                    max_items=1000):
+        stash.add(key, biggie.Entity(data=value))
+
+    stash.close()
+    stash = biggie.Stash(fp.name, cache_size=0)
+
+    result = benchmark(touch_one, stash, list(stash.keys()))
+
+    assert result < 100
+
+
+@pytest.mark.benchmark
+def test_Stash_stress_random_access_10e4(benchmark):
+    """Stress test random-access reads."""
+    fp = tmp.NamedTemporaryFile(suffix=".hdf5")
+    stash = biggie.Stash(fp.name, cache_size=0)
+    shape = (64, 64)
+    for key, value in util.random_ndarray_generator(shape,
+                                                    max_items=10000):
+        stash.add(key, biggie.Entity(data=value))
+
+    stash.close()
+    stash = biggie.Stash(fp.name, cache_size=0)
+
+    result = benchmark(touch_one, stash, list(stash.keys()))
+
+    assert result
 
 
 # def test_Collection___init__():

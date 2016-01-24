@@ -130,7 +130,8 @@ def unpack_entity_list(entities, filter_nulls=True):
 #     return filtered_dict
 
 
-def random_ndarrays(num_items, shape, dtype=np.float64, seed=12345):
+def random_ndarray_generator(shape, loc=0, scale=1.0, max_items=None,
+                             dtype=np.float64, seed=12345):
     """Produce a number of key-value, normally distributed ndarrays.
 
     Parameters
@@ -147,11 +148,15 @@ def random_ndarrays(num_items, shape, dtype=np.float64, seed=12345):
     seed : int, default=12345
         Seed for the random number generator.
 
-    Returns
-    -------
-    ndarrays : dict of np.ndarrays
-        Random value ndarrays.
+    Yields
+    ------
+    key, ndarray : str, np.ndarray
+        Random value ndarray with a key.
     """
     rng = np.random.RandomState(seed)
-    return dict((uuid.uuid4(), rng.normal(shape, dtype=dtype))
-                for _ in range(num_items))
+    count = 0
+    while True:
+        if max_items is not None and count >= max_items:
+            break
+        yield uuid.uuid4(), rng.normal(loc, scale, shape).astype(dtype=dtype)
+        count += 1
