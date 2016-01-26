@@ -46,6 +46,16 @@ class Field(object):
             value = np.asarray(value)
         self._value = value
 
+    def slice(self, slidx):
+        """Return a slice of this field's value.
+
+        Parameters
+        ----------
+        slidx : slice or tuple of slices
+            Slice objects matching the dimensionality of the value.
+        """
+        return self.value[slidx]
+
     @classmethod
     def from_hdf5_dataset(cls, hdf5_dataset):
         """This might be poor practice."""
@@ -64,10 +74,10 @@ class LazyField(Field):
     @property
     def value(self):
         """LazyFields only pull data into the namespace when accessed."""
-        if self._value is None:
-            # self._value = np.asarray(self._dataset.value)
-            self._value = self._dataset.value
-        return super(LazyField, self).value
+        # if self._value is None:
+        #     self._value = self._dataset.value
+        # return self._value
+        return self._dataset.value
 
     @property
     def attrs(self):
@@ -75,6 +85,11 @@ class LazyField(Field):
         if self._attrs is None:
             self._attrs = dict(self._dataset.attrs)
         return self._attrs
+
+    def slice(self, slidx):
+        return self._dataset[slidx]
+        # if self._value is None \
+        #     else self._value[slidx]
 
 
 class Entity(object):
