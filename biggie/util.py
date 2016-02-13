@@ -115,21 +115,6 @@ def unpack_entity_list(entities, filter_nulls=True):
     return data
 
 
-# def dump(obj, stash):
-#     filtered_dict = dict()
-
-#     for k, value in six.iteritems(obj.items()):
-#         if k.startswith('_'):
-#             continue
-
-#         if isinstance(value, np.ndarray):
-#             filtered_dict[k] = item.__json__
-#         else:
-#             filtered_dict[k] = item
-
-#     return filtered_dict
-
-
 def random_ndarray_generator(shape, loc=0, scale=1.0, max_items=None,
                              dtype=np.float64, seed=12345):
     """Produce a number of key-value, normally distributed ndarrays.
