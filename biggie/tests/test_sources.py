@@ -142,7 +142,7 @@ def test_Stash_parallel_read():
         stash.add(key, biggie.Entity(data=value))
 
     # Must close the stash, since the AGU is a generator and refuses to
-    # serialize. See Issue-#1
+    # serialize. Else, `stash._agu = None`.See Issue-#1
     stash.close()
 
     stash = biggie.Stash(fp.name, cache_size=0, keep_open=False)
