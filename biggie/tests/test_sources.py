@@ -123,6 +123,36 @@ def test_Stash_cache(data):
 
 
 # Helper function
+def touch_one(stash, keys=None, key=None):
+    key = np.random.choice(list(keys)) if keys else key
+    entity = stash.get(key)
+    np.asarray(entity.data)
+    # entity.data
+    return True
+
+
+@pytest.mark.unit
+def test_Stash_parallel_read():
+    fp = tmp.NamedTemporaryFile(suffix=".hdf5")
+    stash = biggie.Stash(fp.name, cache_size=0)
+    shape = (64, 64)
+    # Generate more data than cores.
+    data_gen = util.random_ndarray_generator(shape, max_items=50)
+    for key, value in data_gen:
+        stash.add(key, biggie.Entity(data=value))
+
+    # Must close the stash, since the AGU is a generator and refuses to
+    # serialize. See Issue-#1
+    stash.close()
+
+    stash = biggie.Stash(fp.name, cache_size=0, keep_open=False)
+    pool = Parallel(n_jobs=4)
+    fx = delayed(touch_one)
+    res = pool(fx(stash, key=key) for key in stash.keys())
+    assert all(res)
+
+
+# Helper function
 def process_one(stash_in, key, stash_out):
     entity = stash_in.get(key)
     entity.data = entity.data * 2.0
@@ -181,15 +211,6 @@ def stash_fp(request):
         stash.add(key, biggie.Entity(data=value))
     stash.close()
     return fp
-
-
-# Helper function
-def touch_one(stash, keys=None, key=None):
-    key = np.random.choice(list(keys)) if keys else key
-    entity = stash.get(key)
-    np.asarray(entity.data)
-    # entity.data
-    return True
 
 
 @pytest.mark.benchmark
