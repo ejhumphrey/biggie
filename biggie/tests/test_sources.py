@@ -123,28 +123,38 @@ def test_Stash_cache(data):
 
 
 # Helper function
-def touch_one(stash, keys=None, key=None):
-    key = np.random.choice(list(keys)) if keys else key
-    entity = stash.get(key)
-    np.asarray(entity.data)
-    # entity.data
+def process_one(stash_in, key, stash_out):
+    entity = stash_in.get(key)
+    entity.data = entity.data * 2.0
+    stash_out.add(key, entity)
     return True
 
 
 @pytest.mark.unit
-def test_Stash_thread_safe():
-    fp = tmp.NamedTemporaryFile(suffix=".hdf5")
-    stash = biggie.Stash(fp.name, cache_size=0)
+@pytest.mark.skipif(
+    True, reason="hdf5 must be compiled with thread_safe enabled.")
+def test_Stash_parallel_write():
+    fp1 = tmp.NamedTemporaryFile(suffix=".hdf5")
+    stash_in = biggie.Stash(fp1.name, cache_size=0)
     shape = (64, 64)
-    data_gen = util.random_ndarray_generator(shape, max_items=25)
+    # Generate more data than cores.
+    data_gen = util.random_ndarray_generator(shape, max_items=50)
     for key, value in data_gen:
-        stash.add(key, biggie.Entity(data=value))
+        stash_in.add(key, biggie.Entity(data=value))
+    stash_in.close()
+
+    stash_in = biggie.Stash(fp1.name, cache_size=0)
+    fp2 = tmp.NamedTemporaryFile(suffix=".hdf5")
+    stash_out = biggie.Stash(fp2.name, cache_size=0)
 
     pool = Parallel(n_jobs=2)
-    fx = delayed(touch_one)
-    stash = biggie.Stash(fp.name, cache_size=0)
-    res = pool(fx(stash=stash, key=key) for key in stash.keys())
+    fx = delayed(process_one)
+    res = pool(fx(stash_in, key, stash_out) for key in stash_in.keys())
     assert all(res)
+    some_key = np.random.choice(list(stash_in.keys()))
+    np.testing.assert_array_equal(
+        stash_in.get(some_key).data * 2,
+        stash_out.get(some_key).data)
 
 
 data_params = [(10, (64, 64)),
@@ -171,6 +181,15 @@ def stash_fp(request):
         stash.add(key, biggie.Entity(data=value))
     stash.close()
     return fp
+
+
+# Helper function
+def touch_one(stash, keys=None, key=None):
+    key = np.random.choice(list(keys)) if keys else key
+    entity = stash.get(key)
+    np.asarray(entity.data)
+    # entity.data
+    return True
 
 
 @pytest.mark.benchmark
