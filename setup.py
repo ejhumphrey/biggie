@@ -35,6 +35,7 @@ setup(
         'numpy >= 1.9.0',
         'h5py >= 2.5',
         'joblib',
-        'pytest'
+        'pytest',
+        'pymongo >= 3.2'
     ]
 )
