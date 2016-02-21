@@ -10,8 +10,8 @@ import biggie
 import biggie.core as core
 import biggie.util as util
 
-MIN_ROUNDS = 2000
-MAX_ITEMS = 5000
+MIN_ROUNDS = 1000
+MAX_ITEMS = 1000
 
 
 @pytest.fixture(scope='module')

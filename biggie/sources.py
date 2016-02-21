@@ -114,34 +114,34 @@ class Stash(object):
         Parameters
         ----------
         key : str
-            Key of the value to get.
+            Key of the entity to get.
 
         default : object
-            If given, default return value on unfound keys.
+            If given, default return entity on unfound keys.
         """
         # Check local cache for the data first.
-        value = self.__local__.get(key, None)
+        entity = self.__local__.get(key, None)
 
-        # If key is not in local (value == None), go get that sucker.
-        value = self.__load__(key) if value is None else value
+        # If key is not in local (entity == None), go get that sucker.
+        entity = self.__load__(key) if entity is None else entity
 
         # Caching logic.
         if self._cache_size > 0 and (len(self.__local__) >= self._cache_size):
-            # TODO: Pick a value and ditch it.
+            # TODO: Pick a entity and ditch it.
             pass
 
         if self._cache_size > 0:
-            self.__local__[key] = value
+            self.__local__[key] = entity
 
-        return value
+        return entity
 
     def add(self, key, entity, overwrite=False):
-        """Add a key-object pair to the Stash.
+        """Add a key-entity pair to the Stash.
 
         Parameters
         ----------
         key : str
-            Key to write the value under.
+            Key to write the entity under.
 
         entity : Entity
             Data to write to file.

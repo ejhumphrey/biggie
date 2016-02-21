@@ -131,6 +131,15 @@ def touch_one(stash, keys=None, key=None):
     return True
 
 
+# Helper function
+def slice_one(stash, slidx, keys=None, key=None):
+    key = np.random.choice(list(keys)) if keys else key
+    entity = stash.get(key)
+    entity.slice('data', slidx)
+    # entity.data
+    return True
+
+
 @pytest.mark.unit
 def test_Stash_parallel_read():
     fp = tmp.NamedTemporaryFile(suffix=".hdf5")
@@ -189,12 +198,12 @@ def test_Stash_parallel_write():
 
 data_params = [(10, (64, 64)),
                (100, (64, 64)),
-               (1000, (64, 64)),
-               (10000, (64, 64)),
+               # (1000, (64, 64)),
+               # (10000, (64, 64)),
                (10, (1024, 128)),
-               (100, (1024, 128)),
-               (1000, (1024, 128)),
-               (10000, (1024, 128))]
+               (100, (1024, 128)),]
+               # (1000, (1024, 128)),
+               # (10000, (1024, 128))]
 
 
 @pytest.fixture(params=data_params,
@@ -218,6 +227,14 @@ def test_Stash_stress_random(benchmark, stash_fp):
     """Stress test random-access reads on a Stash file."""
     stash = biggie.Stash(stash_fp.name, cache_size=0)
     assert benchmark(touch_one, stash, keys=stash.keys())
+
+
+@pytest.mark.benchmark
+def test_Stash_stress_random_slice(benchmark, stash_fp):
+    """Stress test random-access reads on a Stash file."""
+    stash = biggie.Stash(stash_fp.name, cache_size=0)
+    slidx = (slice(32, 48), slice(32, 48))
+    assert benchmark(slice_one, stash, slidx, keys=stash.keys())
 
 
 @pytest.mark.benchmark
