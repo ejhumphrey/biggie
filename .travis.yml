@@ -24,7 +24,7 @@ install:
 
 script:
     - python --version
-    - py.test -v -m unit -w .
+    - py.test -v -m unit .
 
 after_success:
     - coveralls
