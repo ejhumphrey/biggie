@@ -62,7 +62,7 @@ class Stash(object):
         return self.__handle__ if self.__handle__ is not None else fh
 
     def __load_keymap__(self):
-        if self.__KEYMAP__ not in self._fhandle:
+        if not self._fhandle or self.__KEYMAP__ not in self._fhandle:
             self._keymap = dict()
         else:
             keymap_dset = self._fhandle.get(self.__KEYMAP__)
