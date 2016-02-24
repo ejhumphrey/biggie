@@ -46,6 +46,10 @@ class Field(object):
             value = np.asarray(value)
         self._value = value
 
+    @property
+    def shape(self):
+        return np.shape(self.value)
+
     def slice(self, slidx):
         """Return a slice of this field's value.
 
@@ -78,6 +82,10 @@ class LazyField(Field):
         #     self._value = self._dataset.value
         # return self._value
         return self._dataset.value
+
+    @property
+    def shape(self):
+        return np.shape(self._dataset)
 
     @property
     def attrs(self):
