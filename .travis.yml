@@ -20,12 +20,13 @@ python:
     - "3.5"
 
 install:
+    - pip install pytest pytest-cov
     - pip install coveralls
     - pip install -e ./
 
 script:
     - python --version
-    - py.test -v -m --cov=biggie unit .
+    - py.test -v -m unit --cov=biggie .
 
 after_success:
     - coveralls
