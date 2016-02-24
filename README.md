@@ -2,6 +2,9 @@
 
 A module for managing notoriously big data.
 
+[![Build Status](https://travis-ci.org/ejhumphrey/biggie.svg?branch=master)](https://travis-ci.org/ejhumphrey/biggie)
+[![Coverage Status](https://coveralls.io/repos/github/ejhumphrey/biggie/badge.svg?branch=master)](https://coveralls.io/github/ejhumphrey/biggie?branch=master)
+
 ## Installation
 
 The easiest way to install `biggie` is with pip:

@@ -1,0 +1,36 @@
+sudo: false
+
+addons:
+  apt:
+    packages:
+    - libhdf5-serial-dev
+
+cache:
+  directories:
+    - $HOME/.cache/pip
+
+language: python
+
+notifications:
+  email: false
+
+python:
+    - "2.7"
+    - "3.4"
+    - "3.5"
+
+install:
+    - pip install pytest pytest-cov
+    - pip install coveralls
+    - pip install -e ./
+
+script:
+    - python --version
+    - py.test -v -m unit --cov=biggie .
+
+after_success:
+    - coveralls
+    - pip uninstall -y biggie
+
+after_failure:
+    - pip uninstall -y biggie

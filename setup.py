@@ -23,15 +23,19 @@ setup(
     classifiers=[
         "License :: OSI Approved :: ISC License (ISCL)",
         "Programming Language :: Python",
-        "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
         "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.7"
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.5"
     ],
     keywords='',
     license='ISC',
     install_requires=[
         'numpy >= 1.9.0',
-        'h5py >= 2.2.1'
+        'h5py >= 2.5',
+        'joblib',
+        'pytest',
+        'pymongo >= 3.2'
     ]
 )
