@@ -194,25 +194,3 @@ def test_Stash_parallel_write():
     np.testing.assert_array_equal(
         stash_in.get(some_key).data * 2,
         stash_out.get(some_key).data)
-
-
-# @pytest.mark.benchmark
-# def test_Stash__fhandle(benchmark, stash_fp):
-#     def verify_handle(stash):
-#         return stash._fhandle is not None
-
-#     stash = biggie.Stash(stash_fp.name, cache_size=0)
-#     assert benchmark(verify_handle, stash)
-
-
-# def test_Collection___init__():
-#     collec = biggie.Collection('test')
-#     assert collec is not None
-
-
-# def test_Collection___init__with_stash():
-#     collec = biggie.Collection(
-#         name='test',
-#         stash_kwargs=dict(filename='/tmp/deleteme.hdf5'))
-#     assert collec is not None
-#     assert collec.stash is not None
