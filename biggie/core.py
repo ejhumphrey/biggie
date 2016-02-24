@@ -161,6 +161,9 @@ class Entity(object):
     def __len__(self):
         return len(self.keys())
 
+    def get(self, key):
+        return getattr(self, key)
+
     def keys(self):
         """Returns a list of field names (keys) of the entity."""
         return self.__dict__.keys()

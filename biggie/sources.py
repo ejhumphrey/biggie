@@ -95,7 +95,8 @@ class Stash(object):
     def close(self):
         """write keys and paths to disk"""
         self.__dump_keymap__()
-        self._fhandle.close()
+        if self.__handle__:
+            self.__handle__ = self.__handle__.close()
 
     def __load__(self, key):
         """Deeply load an entity from the base HDF5 file."""
