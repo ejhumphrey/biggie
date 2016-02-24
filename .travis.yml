@@ -25,7 +25,7 @@ install:
 
 script:
     - python --version
-    - py.test -v -m unit .
+    - py.test -v -m --cov=biggie unit .
 
 after_success:
     - coveralls
