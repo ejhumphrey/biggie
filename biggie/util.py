@@ -107,7 +107,7 @@ def unpack_entity_list(entities, filter_nulls=True):
             continue
         if data == {}:
             data = dict([(k, list()) for k in entity.keys()])
-        for k, v in entity.values().iteritems():
+        for k, v in entity.items():
             data[k].append(v)
 
     for k in data:
