@@ -184,6 +184,9 @@ class Entity(object):
         """Return the (key, value) items of the entity."""
         return [(k, getattr(self, k)) for k in self.keys()]
 
+    def todict(self):
+        return {k: v for k, v in self.items()}
+
     @classmethod
     def from_hdf5_group(cls, group):
         """writeme."""

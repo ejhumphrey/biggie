@@ -143,7 +143,7 @@ class Stash(object):
         key : str
             Key to write the entity under.
 
-        entity : Entity
+        entity : Entity or dict
             Data to write to file.
 
         overwrite : bool, default=False
